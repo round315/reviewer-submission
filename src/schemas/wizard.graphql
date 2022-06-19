@@ -1,0 +1,30 @@
+type Mutation {
+    saveEditorPage(id: ID!, details: EditorDetailsInput!): Submission!
+    saveAuthorPage(id: ID!, details: AuthorDetailsInput!): Submission!
+    uploadManuscript(id: ID!, file: Upload!, fileSize: Int!): Submission!
+    deleteManuscript(fileId: ID!, submissionId: ID!): Boolean!
+    uploadSupportingFile(id: ID!, file: Upload!, fileSize: Int!): File!
+    deleteSupportingFile(fileId: ID!, submissionId: ID!): String!
+    saveFilesPage(id: ID!, coverLetter: String): Submission!
+    saveDetailsPage(id: ID!, details: ManuscriptDetailsInput!): Submission!
+    saveDisclosurePage(id: ID!, details: DisclosureDetailsInput!): Submission!
+    submit(id: ID!): Submission!
+    submitSurveyResponse(surveyId: String, submissionId: String, answers: [InputSurveyAnswer]!): SurveyResponse!
+}
+
+type Query {
+    getSubmission(id: ID!): Submission
+}
+
+type UploadProgress {
+    userId: ID!
+    filename: String!
+    fileId: ID!
+    percentage: String!
+    type: String!
+    submissionId: ID!
+}
+
+type Subscription {
+    fileUploadProgress(submissionId: ID!): UploadProgress
+}

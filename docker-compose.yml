@@ -1,0 +1,125 @@
+version: '3.4'
+services:
+  reviewer-submission:
+    container_name: reviewer-submission_app
+    build:
+      context: './'
+      target: dev
+    image: libero/reviewer-submission:${IMAGE_TAG:-local}
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test: 'echo -e "GET /\n\n" | nc localhost 3000'
+      interval: 3s
+      timeout: 10s
+      retries: 3
+    environment:
+      DATABASE_NAME: postgres
+      DATABASE_USER: postgres
+      DATABASE_PASSWORD: postgres
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      S3_AWS_ENDPOINT: http://s3:9000
+      S3_ACCESS_KEY_ID: minio
+      S3_SECRET_ACCESS_KEY: minio123
+      S3_FORCE_PATH_STYLE: 'true'
+      S3_FILE_BUCKET: test
+      NEW_RELIC_HOME: /etc/reviewer/
+      MAX_QL_COMPLEXITY: 100
+      MAX_QL_DEPTH: 5
+      MAX_FILE_SIZE_IN_BYTES: 100000000
+      AUTHENTICATION_JWT_SECRET: super_secret_jam
+      USER_API_URL: http://reviewer-mocks:3003
+      SCIENCE_BEAM_URL: http://reviewer-mocks:3003/science-beam/convert
+      SCIENCE_BEAM_TIMEOUT: 20000
+      MECA_S3_PATH: 'meca-archive'
+      MECA_SFTP_PATH: '/upload'
+      MECA_SFTP_HOST: 'sftp'
+      MECA_SFTP_USERNAME: 'test'
+      MECA_SFTP_PASSWORD: 'test'
+      MECA_SFTP_PORT: 22
+      MECA_API_KEY: 'someApiKey'
+      MECA_EMAIL_PREFIX: '(local)'
+      MECA_EMAIL_RECIPIENT: 'libero-reviewer@mailinator.com'
+      SEND_MAIL: 'false'
+      MAIL_SENDER: 'noreply@elifesciences.org'
+      SES_REGION: ''
+      SES_SECRET_ACCESS_KEY: ''
+      SES_ACCESS_KEY_ID: ''
+      INCLUDE_NEW_RELIC: 'false'
+    volumes:
+      - ./config:/etc/reviewer
+      - ./.eslintignore:/app/.eslintignore
+      - ./.eslintrc.js:/app/.eslintrc.js
+      - ./.prettierrc.js:/app/.prettierrc.js
+      - ./jest.config.js:/app/jest.config.js
+      - ./src/:/app/src
+      - ./package.json:/app/package.json
+      - ./yarn.lock:/app/yarn.lock
+      - ./tests/:/app/tests
+      - ./tsconfig.json:/app/tsconfig.json
+    networks:
+      - "reviewer"
+
+  postgres:
+    image: liberoadmin/reviewer-xpub-postgres:latest
+    container_name: reviewer-submission_postgres
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_PORT: 5432
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 2s
+      timeout: 30s
+      retries: 10
+    networks:
+      - "reviewer"
+
+  s3:
+    image: minio/minio:RELEASE.2020-02-27T00-23-05Z
+    container_name: reviewer-submission_s3
+    ports:
+      - "9004:9000"
+    environment:
+      MINIO_ACCESS_KEY: minio
+      MINIO_SECRET_KEY: minio123
+    command: server /data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    networks:
+      - "reviewer"
+
+  s3_create-bucket:
+    image: minio/mc
+    depends_on:
+      - s3
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc config host add submission http://s3:9000 minio minio123;
+      /usr/bin/mc rm -r --force submission/test;
+      /usr/bin/mc mb submission/test;
+      /usr/bin/mc policy set download submission/test;
+      /usr/bin/mc policy set public submission/test;
+      exit 0;
+      "
+    networks:
+      - "reviewer"
+
+  sftp:
+    image: atmoz/sftp:alpine
+    container_name: reviewer-submission_sftp
+    ports:
+      - "2222:22"
+    command: test:test:::upload
+    networks:
+      - "reviewer"
+
+networks:
+  reviewer:
+    external:
+      name: "reviewer"

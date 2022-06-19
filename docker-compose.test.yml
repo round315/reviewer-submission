@@ -1,0 +1,25 @@
+version: '3.4'
+services:
+  reviewer-submission:
+    container_name: reviewer-submission_app
+    environment:
+      MAX_FILE_SIZE_IN_BYTES: 1000000
+      NEW_RELIC_NO_CONFIG_FILE: "true"
+
+  reviewer-mocks:
+    image: liberoadmin/reviewer-mocks:latest
+    container_name: reviewer-submission_mocks
+    ports:
+      - "3003:3003"
+    environment:
+      DATA_DIRECTORY_PATH: "/etc/mock-data/"
+    volumes:
+      - ./tests/config/reviewer-mocks.json:/etc/reviewer/config.json:z
+      - ./tests/mock-data:/etc/mock-data/
+    healthcheck:
+      test: 'echo -e "GET /health\n\n" | nc localhost 3003'
+      interval: 3s
+      timeout: 10s
+      retries: 3
+    networks: 
+      - "reviewer"

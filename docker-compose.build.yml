@@ -1,0 +1,9 @@
+version: '3.4'
+services:
+  reviewer-submission:
+    build:
+      context: './'
+      target: prod
+      args:
+        image_tag: ${IMAGE_TAG}
+    image: libero/reviewer-submission:${IMAGE_TAG}

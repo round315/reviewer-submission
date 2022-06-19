@@ -1,0 +1,9 @@
+type Query {
+    getSubmissions: [Submission!]!
+}
+
+type Mutation {
+    startSubmission(articleType: String!): Submission!
+    saveArticleType(id: ID!, articleType: String!): Submission!
+    deleteSubmission(id: ID!): ID
+}
